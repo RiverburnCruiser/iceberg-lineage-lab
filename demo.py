@@ -1,10 +1,9 @@
-"""End-to-end demo. Run: python demo.py"""
-import json
+"""End-to-end demo. Run: python demo.py  (per-question demos: python -m lab.show all)"""
 import shutil
 
 from lab.cdc import SnapshotWatcher, snapshot_history
 from lab.governance import DataContractError, current_snapshot
-from lab.lineage import LINEAGE_FILE
+from lab.lineage import error_of, read_events, snapshot_of
 from lab.spark import get_spark
 from jobs.positions import build_positions, build_positions_buggy, create_tables, load_trades
 
@@ -54,8 +53,7 @@ step("6. Time travel: positions as of day 1")
 spark.sql(f"SELECT * FROM curated.positions VERSION AS OF {day1} ORDER BY 1, 2").show()
 
 step("7. Lineage events")
-for line in LINEAGE_FILE.read_text().splitlines():
-    e = json.loads(line)
-    snap = lambda ds: [(d["name"], d["facets"]["icebergSnapshot"]["snapshotId"]) for d in ds]
+for e in read_events():
+    snap = lambda ds: [(d["name"], snapshot_of(d)) for d in ds]
     print(f'{e["eventType"]:8} {e["job"]["name"]:22} in={snap(e["inputs"])} '
-          f'out={snap(e["outputs"])} {e["run"]["facets"].get("error", "")}')
+          f'out={snap(e["outputs"])} {error_of(e)}')
