@@ -118,6 +118,12 @@ def write_audit_publish(output: str, keys: list[str], pii: Iterable[str] = ()):
         def wrapper(spark: SparkSession, **params):
             with run_scope(fn.__name__) as run:
                 branch = run.branch
+                if current_snapshot(spark, output) is not None:
+                    # Create the branch from main ourselves. If the first WAP write creates
+                    # it, Iceberg computes the snapshot's total-records / total-data-files
+                    # from zero instead of from main (seen on 1.10), and the metadata
+                    # monitor would report wrong row counts.
+                    spark.sql(f"ALTER TABLE {output} CREATE BRANCH {branch}")
                 spark.conf.set("spark.wap.branch", branch)          # write
                 try:
                     result = fn(spark, **params)
