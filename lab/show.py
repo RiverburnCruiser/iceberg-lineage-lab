@@ -113,9 +113,9 @@ def q1(spark: SparkSession) -> None:
               "readable_metrics.ticker.upper_bound AS ticker_max FROM raw.trades.files").show()
     step("hidden partitioning: PARTITIONED BY days(trade_ts); queries filter trade_ts itself")
     total = spark.table("raw.trades.files").count()
-    read, skipped = scan(spark.table("raw.trades").where("trade_ts >= '2026-11-10'"))
+    read, _ = scan(spark.table("raw.trades").where("trade_ts >= '2026-11-10'"))
     print(f"WHERE trade_ts >= '2026-11-10'  ->  read {read} of {total} data files "
-          f"(Iceberg scan metrics: resultDataFiles={read}, skippedDataFiles={skipped})")
+          f"(Iceberg scan metric resultDataFiles={read})")
     step("rollback: undo a bad load by moving main back; no data is copied")
     good = current_snapshot(spark, "raw.trades")
     load_trades(spark, [(99, "Z9", "Bad Feed", "MSFT", -1_000_000, 0.0)], trade_ts=DAY2)

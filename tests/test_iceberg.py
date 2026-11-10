@@ -13,8 +13,8 @@ def test_hidden_partitioning_prunes_by_day(spark):
     load_trades(spark, [(2, "B2", "Ben Li", "MSFT", 20, 400.0)], trade_ts=D2)
     days = {r.day for r in spark.sql("SELECT partition.trade_ts_day AS day FROM raw.trades.files").collect()}
     assert len(days) == 2
-    read, skipped = scan(spark.table("raw.trades").where("trade_ts >= '2026-11-10'"))
-    assert (read, skipped) == (1, 1)
+    read, _ = scan(spark.table("raw.trades").where("trade_ts >= '2026-11-10'"))
+    assert read == 1           # skippedDataFiles varies: whole manifests may be pruned first
 
 
 def test_schema_evolution_rewrites_nothing_and_rollback_restores(spark):
