@@ -19,7 +19,8 @@ def spark(tmp_path_factory):
 def fresh_tables(spark, tmp_path, monkeypatch):
     import lab.lineage
     from jobs.positions import create_tables
+    from lab.spark import reset_warehouse
     monkeypatch.setattr(lab.lineage, "LINEAGE_FILE", tmp_path / "events.jsonl")
-    spark.sql("DROP TABLE IF EXISTS raw.trades PURGE")
-    spark.sql("DROP TABLE IF EXISTS curated.positions PURGE")
+    monkeypatch.delenv("MARQUEZ_URL", raising=False)
+    reset_warehouse(spark)
     create_tables(spark)

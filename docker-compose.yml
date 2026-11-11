@@ -1,0 +1,40 @@
+# Optional: Marquez, an OpenLineage backend with a lineage graph UI.
+#   docker compose up -d
+#   MARQUEZ_URL=http://localhost:5000 python -m lab.show q3
+#   open http://localhost:3000   (namespace: iceberg-lineage-lab)
+# The core demos and tests do not need this.
+services:
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+      POSTGRES_DB: marquez
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marquez"]
+      interval: 2s
+      retries: 30
+
+  api:
+    image: marquezproject/marquez:0.50.0
+    environment:
+      MARQUEZ_PORT: 5000
+      MARQUEZ_ADMIN_PORT: 5001
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: marquez
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+    ports: ["5000:5000", "5001:5001"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: marquezproject/marquez-web:0.50.0
+    environment:
+      MARQUEZ_HOST: api
+      MARQUEZ_PORT: 5000
+      WEB_PORT: 3000
+    ports: ["3000:3000"]
+    depends_on: [api]

@@ -21,5 +21,14 @@ def get_spark(warehouse: str = "warehouse") -> SparkSession:
         .config("spark.sql.defaultCatalog", "local")
         .config("spark.sql.shuffle.partitions", "2")
         .config("spark.ui.enabled", "false")
+        .config("spark.ui.showConsoleProgress", "false")
         .getOrCreate()
     )
+
+
+def reset_warehouse(spark: SparkSession, namespaces: tuple[str, ...] = ("raw", "curated", "audit")) -> None:
+    """Drop (and purge) every table in the given namespaces."""
+    for ns in namespaces:
+        spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {ns}")
+        for t in spark.sql(f"SHOW TABLES IN {ns}").collect():
+            spark.sql(f"DROP TABLE IF EXISTS {ns}.{t.tableName} PURGE")

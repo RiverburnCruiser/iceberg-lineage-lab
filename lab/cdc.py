@@ -16,6 +16,13 @@ def snapshot_history(spark: SparkSession, table: str) -> DataFrame:
         FROM {table}.snapshots ORDER BY committed_at""")
 
 
+def incremental_appends(spark: SparkSession, table: str, start: int, end: int) -> DataFrame:
+    """Rows from data files *appended* in (start, end]. Cheap, but blind to updates and
+    deletes: MERGE / UPDATE / DELETE commit `overwrite` snapshots, which this read skips."""
+    return (spark.read.option("start-snapshot-id", str(start))
+            .option("end-snapshot-id", str(end)).table(table))
+
+
 def changes_between(spark: SparkSession, table: str, start: int | None,
                     end: int, keys: list[str]) -> DataFrame:
     """Row-level changes in (start, end]: INSERT, DELETE, UPDATE_BEFORE, UPDATE_AFTER."""
