@@ -85,6 +85,45 @@ Run the metadata monitor on a schedule:
 python -m lab.metadata_monitor --every 60 raw.trades curated.positions
 ```
 
+## Benchmark
+
+```bash
+python bench.py --rows 5000000 --days 30 2>/dev/null
+```
+
+`bench.py` generates synthetic trades inside Spark (5,000 accounts, 200 tickers,
+fixed seed) in its own `bench_warehouse/`, then times the real `build_positions`
+job with and without its decorators, a one-day query, and the changelog of one
+incremental MERGE. Each timing is the second of two runs. This is a single-laptop,
+Spark local-mode run (`local[2]`, 1 GB default driver memory) on synthetic data, not
+a cluster measurement. Result of one run with 5,000,000 rows:
+
+| Metric | Value |
+| --- | --- |
+| Input trades (raw.trades) | 5000000 |
+| Days / data files in raw.trades | 30 / 30 |
+| Output positions (curated.positions) | 993255 |
+| Governed build_positions, 2nd run (s) | 9.36 |
+| Governed throughput (input rows/s) | 534,324 |
+| Bare MERGE without decorators, 2nd run (s) | 6.34 |
+| Governance overhead | 47.5% |
+| One-day filter: data files read / total | 1 / 30 |
+| One-day filter: skippedDataFiles metric | 29 |
+| Extra day appended (trades) | 166666 |
+| Governed incremental MERGE (s) | 16.38 |
+| Changelog rows: INSERT | 993 |
+| Changelog rows: UPDATE_AFTER | 152543 |
+| Changelog rows: UPDATE_BEFORE | 152543 |
+| Rows in curated.positions after MERGE | 994248 |
+| Total script time (s) | 80.40 |
+
+Machine: Intel Core i7-1065G7 @ 1.30GHz, 8 logical cores, 11.5 GiB RAM, Linux 6.8;
+Spark 4.0.1, `master=local[2]`, `shuffle.partitions=2`. The governed time includes
+everything the decorators add: the input contract check, creating and dropping the
+WAP branch, the null and duplicate-key checks on the branch, the fast-forward, the
+audit row and the lineage events. The benchmark does not break that down further.
+Timings vary from run to run with machine load.
+
 ## Layout
 
 | File | What it does |

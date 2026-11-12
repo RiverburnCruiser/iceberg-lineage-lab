@@ -5,3 +5,4 @@ __pycache__/
 .venv/
 spark-warehouse/
 metastore_db/
+bench_warehouse/
